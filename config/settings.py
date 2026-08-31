@@ -74,14 +74,20 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 
-# Database — Automatically detects Railway DATABASE_URL, with local fallback
+# Database — Automatically detects Railway DATABASE_URL / POSTGRES_URL, with local fallback
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
-DATABASE_URL = env("DATABASE_URL", default="")
+DATABASE_URL = (
+    env("DATABASE_URL", default="")
+    or env("POSTGRES_URL", default="")
+    or env("POSTGRES_PRIVATE_URL", default="")
+    or env("POSTGRESQL_URL", default="")
+)
+
 if DATABASE_URL:
     DATABASES = {
-        "default": dj_database_url.config(
-            default=DATABASE_URL,
+        "default": dj_database_url.parse(
+            DATABASE_URL,
             conn_max_age=600,
             conn_health_checks=True,
         )
