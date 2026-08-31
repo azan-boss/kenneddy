@@ -16,7 +16,10 @@ SECRET_KEY = env('SECRET_KEY', default='django-insecure-prod-key-kennedy-fleet-2
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "testserver", "*"]
+ALLOWED_HOSTS = env(
+    "ALLOWED_HOSTS",
+    default="localhost,127.0.0.1,testserver,web-production-6d6bb.up.railway.app",
+).split(",")
 
 
 # Application definition
@@ -188,7 +191,11 @@ else:
 
 
 # CORS & CSRF Configuration for Railway & Local
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOWED_ORIGINS = env(
+    "CORS_ALLOWED_ORIGINS",
+    default="https://kennedy-rafy.vercel.app",
+).split(",")
 CORS_ALLOW_CREDENTIALS = True
 
 CSRF_TRUSTED_ORIGINS = [
@@ -200,4 +207,5 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:8080",
     "https://*.railway.app",
     "https://*.up.railway.app",
+    "https://kennedy-rafy.vercel.app",
 ]
