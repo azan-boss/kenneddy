@@ -51,6 +51,7 @@ urlpatterns = [
 
     # JWT auth — login + refresh
     path("api/auth/login/", TokenObtainPairView.as_view(serializer_class=CustomTokenObtainPairSerializer), name="token-obtain"),
+    path("auth/login/", TokenObtainPairView.as_view(serializer_class=CustomTokenObtainPairSerializer), name="token-obtain-alias"),
     path("api/auth/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
 
     # Accounts app — signup + profile + addresses + admin rider approval
