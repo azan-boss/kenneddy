@@ -1,0 +1,26 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.env/
+.venv/
+env/
+venv/
+ENV/
+
+# Database / local volumes
+*.sqlite3
+pgdata/
+
+# Static collection
+staticfiles/
+
+# Secrets & environment
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp

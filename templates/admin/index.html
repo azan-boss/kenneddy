@@ -1,0 +1,494 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}{{ block.super }}
+<style>
+  /* Dashboard Grid */
+  .caddy-dash-hero {
+    background: linear-gradient(135deg, #18110c 0%, #261911 50%, #1c130d 100%);
+    border: 2px solid rgba(255, 85, 0, 0.3);
+    border-radius: var(--radius-lg);
+    padding: 28px 32px;
+    color: #ffffff;
+    margin-bottom: 28px;
+    box-shadow: var(--shadow-lg);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .caddy-dash-hero::before {
+    content: "";
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(255, 85, 0, 0.18) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+    animation: floatSlow 6s ease-in-out infinite;
+  }
+
+  .caddy-hero-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 4px 12px;
+    border-radius: var(--radius-full);
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--gold);
+    margin-bottom: 12px;
+  }
+
+  .caddy-hero-pulse {
+    width: 8px;
+    height: 8px;
+    background: var(--emerald);
+    border-radius: 50%;
+    animation: pulseGlow 2s infinite;
+  }
+
+  .caddy-hero-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.75rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin: 0 0 8px 0;
+  }
+
+  .caddy-hero-sub {
+    font-size: 0.92rem;
+    color: rgba(255, 255, 255, 0.75);
+    margin: 0;
+    max-width: 680px;
+    line-height: 1.5;
+  }
+
+  /* Metric KPI Cards */
+  .caddy-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 18px;
+    margin-bottom: 32px;
+  }
+
+  .caddy-kpi-card {
+    background: #ffffff;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px 22px;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .caddy-kpi-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: rgba(255, 85, 0, 0.35);
+  }
+
+  .caddy-kpi-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .caddy-kpi-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+  }
+
+  .caddy-kpi-val {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--charcoal);
+    line-height: 1.1;
+    margin: 4px 0;
+  }
+
+  .caddy-kpi-label {
+    font-size: 0.76rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--charcoal-subtle);
+  }
+
+  .caddy-kpi-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: var(--flame);
+    text-decoration: none;
+    margin-top: 8px;
+    transition: var(--transition);
+  }
+  .caddy-kpi-link:hover {
+    gap: 8px;
+  }
+
+  /* Quick Actions Grid */
+  .caddy-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .caddy-action-tile {
+    background: #ffffff;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 18px 20px;
+    box-shadow: var(--shadow-sm);
+    text-decoration: none !important;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: var(--transition);
+  }
+
+  .caddy-action-tile:hover {
+    border-color: var(--flame);
+    transform: translateY(-3px) scale(1.01);
+    box-shadow: var(--shadow-md);
+  }
+
+  .caddy-action-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    flex-shrink: 0;
+  }
+
+  .caddy-action-content h4 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--charcoal);
+    margin: 0 0 4px 0;
+  }
+
+  .caddy-action-content p {
+    font-size: 0.78rem;
+    color: var(--charcoal-subtle);
+    margin: 0;
+    line-height: 1.4;
+  }
+
+  /* Redesigned Model Rows */
+  .caddy-model-card {
+    background: #ffffff;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+
+  .caddy-model-header {
+    background: #faf6f0;
+    border-bottom: 1.5px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .caddy-model-header h3 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--charcoal);
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .caddy-model-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .caddy-model-table td, .caddy-model-table th {
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .caddy-model-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  .caddy-model-table tr:hover {
+    background: rgba(255, 85, 0, 0.03);
+  }
+
+  .caddy-btn-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 14px;
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-decoration: none !important;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    transition: var(--transition);
+  }
+
+  .caddy-btn-add {
+    background: rgba(255, 85, 0, 0.1);
+    color: var(--flame);
+    border: 1px solid rgba(255, 85, 0, 0.25);
+  }
+  .caddy-btn-add:hover {
+    background: var(--flame);
+    color: #ffffff;
+  }
+
+  .caddy-btn-change {
+    background: rgba(25, 18, 12, 0.05);
+    color: var(--charcoal);
+    border: 1px solid var(--border);
+  }
+  .caddy-btn-change:hover {
+    background: var(--charcoal);
+    color: #ffffff;
+  }
+</style>
+{% endblock %}
+
+{% block coltype %}colMS{% endblock %}
+
+{% block bodyclass %}{{ block.super }} dashboard{% endblock %}
+
+{% block content %}
+<div id="content-main">
+
+  <!-- Hero Operations Banner -->
+  <div class="caddy-dash-hero">
+    <div class="caddy-hero-tag">
+      <span class="caddy-hero-pulse"></span>
+      <span>Fleet Operations Active</span>
+    </div>
+    <h2 class="caddy-hero-title">Welcome to Kennedy Caddy Command</h2>
+    <p class="caddy-hero-sub">
+      Live kitchen dispatch, rider onboarding, real-time customer order tracking, and financial verification ledger for Kennedy Moon Grill.
+    </p>
+  </div>
+
+  <!-- Animated KPI Metric Cards -->
+  <div class="caddy-kpi-grid">
+    <!-- Live Orders -->
+    <div class="caddy-kpi-card">
+      <div class="caddy-kpi-header">
+        <span class="caddy-kpi-label">Kitchen & Live Orders</span>
+        <div class="caddy-kpi-icon" style="background: #fff0e6; color: #ff5500;">🔥</div>
+      </div>
+      <div class="caddy-kpi-val">{{ kpi_live_orders|default:"Live" }}</div>
+      <a href="{% url 'admin:orders_order_changelist' %}?status__in=confirmed,kitchen,packed,onway" class="caddy-kpi-link">
+        Dispatch queue →
+      </a>
+    </div>
+
+    <!-- Pending Riders -->
+    <div class="caddy-kpi-card">
+      <div class="caddy-kpi-header">
+        <span class="caddy-kpi-label">Riders Pending Review</span>
+        <div class="caddy-kpi-icon" style="background: #fff9db; color: #f59f00;">🛵</div>
+      </div>
+      <div class="caddy-kpi-val">{{ kpi_pending_riders|default:"Fleet" }}</div>
+      <a href="{% url 'admin:auth_user_changelist' %}?is_active__exact=0&profile__role__exact=rider" class="caddy-kpi-link">
+        Review applications →
+      </a>
+    </div>
+
+    <!-- Revenue -->
+    <div class="caddy-kpi-card">
+      <div class="caddy-kpi-header">
+        <span class="caddy-kpi-label">Delivered Revenue</span>
+        <div class="caddy-kpi-icon" style="background: #ecfdf5; color: #10b981;">💰</div>
+      </div>
+      <div class="caddy-kpi-val" style="color: #10b981;">{{ kpi_total_revenue|default:"Rs Ledger" }}</div>
+      <a href="{% url 'admin:orders_order_changelist' %}?status__exact=delivered" class="caddy-kpi-link">
+        Settled orders →
+      </a>
+    </div>
+
+    <!-- Menu Dishes -->
+    <div class="caddy-kpi-card">
+      <div class="caddy-kpi-header">
+        <span class="caddy-kpi-label">Menu Dishes</span>
+        <div class="caddy-kpi-icon" style="background: #eff6ff; color: #3b82f6;">🍽️</div>
+      </div>
+      <div class="caddy-kpi-val">{{ kpi_total_dishes|default:"Active" }}</div>
+      <a href="{% url 'admin:menu_dish_changelist' %}" class="caddy-kpi-link">
+        Manage catalog →
+      </a>
+    </div>
+  </div>
+
+  <!-- Interactive Quick Actions Grid -->
+  <h3 style="font-family: 'Space Grotesk', sans-serif; font-size: 1.1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--charcoal); margin: 0 0 16px 0;">
+    ⚡ Operational Command Hub
+  </h3>
+  <div class="caddy-actions-grid">
+    <!-- Action 1 -->
+    <a href="{% url 'admin:auth_user_changelist' %}?is_active__exact=0&profile__role__exact=rider" class="caddy-action-tile">
+      <div class="caddy-action-icon" style="background: #fff0e6; color: #ff5500;">🛵</div>
+      <div class="caddy-action-content">
+        <h4>Review & Approve Riders</h4>
+        <p>1-Click activate delivery partner applications</p>
+      </div>
+    </a>
+
+    <!-- Action 2 -->
+    <a href="{% url 'admin:orders_order_changelist' %}?status__exact=confirmed" class="caddy-action-tile">
+      <div class="caddy-action-icon" style="background: #ecfdf5; color: #10b981;">🍳</div>
+      <div class="caddy-action-content">
+        <h4>Kitchen Ticket Dispatch</h4>
+        <p>Advance confirmed orders to cooking & packing</p>
+      </div>
+    </a>
+
+    <!-- Action 3 -->
+    <a href="{% url 'admin:orders_order_changelist' %}?payment_status__exact=pending" class="caddy-action-tile">
+      <div class="caddy-action-icon" style="background: #fff9db; color: #f59f00;">💳</div>
+      <div class="caddy-action-content">
+        <h4>Verify JazzCash / EasyPaisa</h4>
+        <p>Verify customer receipts & transaction references</p>
+      </div>
+    </a>
+
+    <!-- Action 4 -->
+    <a href="{% url 'admin:menu_dish_changelist' %}" class="caddy-action-tile">
+      <div class="caddy-action-icon" style="background: #eff6ff; color: #3b82f6;">🍽️</div>
+      <div class="caddy-action-content">
+        <h4>Menu & Pricing Studio</h4>
+        <p>Update base prices, sizes, spiciness & availability</p>
+      </div>
+    </a>
+
+    <!-- Action 5 -->
+    <a href="{% url 'admin:accounts_address_changelist' %}" class="caddy-action-tile">
+      <div class="caddy-action-icon" style="background: #f5f3ff; color: #8b5cf6;">📍</div>
+      <div class="caddy-action-content">
+        <h4>Customer Drop Pins</h4>
+        <p>Inspect Pakistan lat/lng coordinates and address book</p>
+      </div>
+    </a>
+
+    <!-- Action 6 -->
+    <a href="/api/docs/" target="_blank" class="caddy-action-tile">
+      <div class="caddy-action-icon" style="background: #fef2f2; color: #ef4444;">⚡</div>
+      <div class="caddy-action-content">
+        <h4>Swagger OpenAPI Docs</h4>
+        <p>Test all live DRF endpoints & JWT authentication</p>
+      </div>
+    </a>
+  </div>
+
+  <!-- Standard App Models Section (Modernized) -->
+  <h3 style="font-family: 'Space Grotesk', sans-serif; font-size: 1.1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--charcoal); margin: 32px 0 16px 0;">
+    📋 Data Management Systems
+  </h3>
+
+  {% if app_list %}
+    {% for app in app_list %}
+      <div class="caddy-model-card">
+        <div class="caddy-model-header">
+          <h3>
+            <span>{{ app.name }}</span>
+          </h3>
+          <a href="{{ app.app_url }}" class="caddy-btn-pill caddy-btn-change" style="font-size: 0.72rem;">View all in {{ app.name }}</a>
+        </div>
+        <table class="caddy-model-table">
+          <tbody>
+            {% for model in app.models %}
+              <tr class="model-{{ model.object_name|lower }}">
+                <td style="font-weight: 700; width: 45%;">
+                  {% if model.admin_url %}
+                    <a href="{{ model.admin_url }}" style="color: var(--charcoal); text-decoration: none; font-size: 0.92rem;">{{ model.name }}</a>
+                  {% else %}
+                    <span style="color: var(--charcoal);">{{ model.name }}</span>
+                  {% endif %}
+                </td>
+                <td style="text-align: right; width: 55%;">
+                  {% if model.add_url %}
+                    <a href="{{ model.add_url }}" class="caddy-btn-pill caddy-btn-add">+ Add</a>
+                  {% endif %}
+                  {% if model.admin_url %}
+                    <a href="{{ model.admin_url }}" class="caddy-btn-pill caddy-btn-change">Manage</a>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endfor %}
+  {% else %}
+    <p>{% translate "You don’t have permission to view or edit anything." %}</p>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block sidebar %}
+<div id="content-related" style="margin-right: 0;">
+  <div class="module" id="recent-actions-module" style="background: #ffffff; border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow-sm);">
+    <h2 style="background: transparent !important; border-bottom: 2px solid var(--border) !important; padding: 0 0 12px 0 !important; color: var(--charcoal); font-size: 0.88rem;">
+      🕒 Recent Activity Log
+    </h2>
+    {% load log %}
+    {% get_admin_log 8 as admin_log for_user user %}
+    {% if not admin_log %}
+      <p style="font-size: 0.8rem; color: var(--charcoal-subtle); margin-top: 12px;">{% translate 'None available' %}</p>
+    {% else %}
+      <ul class="actionlist" style="padding-left: 0; list-style: none; margin-top: 12px;">
+      {% for entry in admin_log %}
+        <li class="{% if entry.is_addition %}addlink{% endif %}{% if entry.is_change %}changelink{% endif %}{% if entry.is_deletion %}deletelink{% endif %}" style="padding: 6px 0; border-bottom: 1px solid rgba(44,32,22,0.06); font-size: 0.8rem;">
+          <span style="font-weight: 700; color: var(--charcoal);">{{ entry.object_repr }}</span>
+          <br/>
+          <span style="font-size: 0.72rem; color: var(--charcoal-subtle);">
+            {% if entry.content_type %}
+              <span class="mini quiet">{% filter capfirst %}{{ entry.content_type.name }}{% endfilter %}</span>
+            {% else %}
+              <span class="mini quiet">{% translate 'Unknown content' %}</span>
+            {% endif %}
+            · {{ entry.action_time|timesince }} ago
+          </span>
+        </li>
+      {% endfor %}
+      </ul>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

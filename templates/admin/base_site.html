@@ -1,0 +1,575 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Kennedy Caddy Admin') }}{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Space+Grotesk:wght@500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-dark: #120c08;
+    --bg-card: #ffffff;
+    --bg-surface: #faf7f2;
+    --bg-cream: #f4ede2;
+    --flame: #ff5500;
+    --flame-glow: rgba(255, 85, 0, 0.25);
+    --flame-hover: #e04a00;
+    --flame-light: #fff2e8;
+    --charcoal: #1a120c;
+    --charcoal-light: #2b1f16;
+    --charcoal-subtle: #7a6656;
+    --gold: #f59f00;
+    --gold-light: #fff9db;
+    --emerald: #10b981;
+    --emerald-light: #ecfdf5;
+    --ruby: #ef4444;
+    --ruby-light: #fef2f2;
+    --blue: #2563eb;
+    --blue-light: #eff6ff;
+    --border: rgba(44, 32, 22, 0.08);
+    --border-hover: rgba(255, 85, 0, 0.3);
+    --radius-xs: 6px;
+    --radius-sm: 10px;
+    --radius-md: 14px;
+    --radius-lg: 20px;
+    --radius-full: 9999px;
+    --shadow-card: 0 4px 20px -2px rgba(26, 18, 12, 0.06), 0 1px 3px rgba(26, 18, 12, 0.04);
+    --shadow-hover: 0 12px 30px -4px rgba(26, 18, 12, 0.12), 0 4px 10px -2px rgba(255, 85, 0, 0.08);
+    --shadow-flame: 0 4px 16px rgba(255, 85, 0, 0.35);
+    --transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+    background-color: var(--bg-cream) !important;
+    background-image: 
+      radial-gradient(at 0% 0%, rgba(255, 85, 0, 0.04) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(245, 159, 0, 0.03) 0px, transparent 50%) !important;
+    color: var(--charcoal) !important;
+    -webkit-font-smoothing: antialiased;
+    margin: 0;
+  }
+
+  /* Compact Executive Header (Merged Single-Row Topbar) */
+  #header {
+    background: linear-gradient(90deg, #160e09 0%, #20140d 50%, #160e09 100%) !important;
+    border-bottom: 1px solid rgba(255, 85, 0, 0.25) !important;
+    padding: 0 24px !important;
+    height: 54px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25) !important;
+  }
+
+  #branding {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  #branding h1 {
+    font-family: 'Space Grotesk', sans-serif !important;
+    font-weight: 800 !important;
+    font-size: 1.05rem !important;
+    margin: 0 !important;
+  }
+
+  #branding h1 a:link, #branding h1 a:visited {
+    color: #ffffff !important;
+    text-decoration: none !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: var(--transition);
+  }
+
+  .caddy-mini-chip {
+    background: linear-gradient(135deg, var(--flame) 0%, #ff8800 100%);
+    color: #ffffff;
+    font-size: 0.62rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    padding: 2px 7px;
+    border-radius: var(--radius-full);
+    box-shadow: 0 2px 8px rgba(255, 85, 0, 0.4);
+  }
+
+  /* Center Nav Pills */
+  .caddy-nav-pills {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .caddy-nav-pills a {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border-radius: var(--radius-full);
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.74rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: var(--transition);
+  }
+
+  .caddy-nav-pills a:hover {
+    background: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+    transform: translateY(-1px);
+    border-color: rgba(255, 255, 255, 0.25);
+  }
+
+  .caddy-nav-pills a.active {
+    background: var(--flame);
+    color: #ffffff;
+    border-color: var(--flame);
+    box-shadow: 0 2px 10px rgba(255, 85, 0, 0.4);
+  }
+
+  /* User Info on Right */
+  #user-tools {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+    color: rgba(255, 255, 255, 0.7) !important;
+    flex-shrink: 0;
+  }
+
+  #user-tools strong {
+    color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 3px 10px;
+    border-radius: var(--radius-full);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    font-weight: 700;
+  }
+
+  #user-tools a {
+    color: var(--gold) !important;
+    text-decoration: none !important;
+    font-weight: 700 !important;
+    padding: 4px 8px !important;
+    border-radius: var(--radius-xs) !important;
+    transition: var(--transition) !important;
+  }
+
+  #user-tools a:hover {
+    color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  #user-tools form button {
+    background: transparent !important;
+    border: none !important;
+    color: #f87171 !important;
+    cursor: pointer !important;
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    padding: 4px 8px !important;
+    border-radius: var(--radius-xs) !important;
+    transition: var(--transition) !important;
+  }
+  #user-tools form button:hover {
+    background: rgba(239, 68, 68, 0.15) !important;
+    color: #ffffff !important;
+  }
+
+  /* Ultra Clean Compact Breadcrumbs */
+  div.breadcrumbs {
+    background: #ffffff !important;
+    border-bottom: 1px solid var(--border) !important;
+    padding: 8px 24px !important;
+    font-size: 0.76rem !important;
+    font-weight: 600 !important;
+    color: var(--charcoal-subtle) !important;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  div.breadcrumbs a {
+    color: var(--flame) !important;
+    font-weight: 700 !important;
+    text-decoration: none !important;
+  }
+  div.breadcrumbs a:hover { text-decoration: underline !important; }
+
+  /* Main Content Layout */
+  #content {
+    padding: 20px 24px !important;
+    max-width: 1440px;
+    margin: 0 auto;
+  }
+  #content-main { float: none !important; width: 100% !important; }
+
+  /* ==========================================================================
+     LUXURY DATA TABLE / CHANGELIST STYLING
+     ========================================================================== */
+
+  #changelist {
+    background: #ffffff !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-md) !important;
+    box-shadow: var(--shadow-card) !important;
+    overflow: hidden !important;
+    margin-top: 14px !important;
+    transition: var(--transition);
+  }
+
+  /* Search & Toolbar */
+  #toolbar {
+    background: #faf7f2 !important;
+    border-bottom: 1px solid var(--border) !important;
+    padding: 12px 18px !important;
+    margin: 0 !important;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  #changelist-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+  }
+
+  #changelist-search input[type="text"] {
+    background: #ffffff !important;
+    border: 1.5px solid var(--border) !important;
+    border-radius: var(--radius-full) !important;
+    padding: 7px 16px !important;
+    font-size: 0.82rem !important;
+    width: 320px !important;
+    transition: var(--transition) !important;
+  }
+  #changelist-search input[type="text"]:focus {
+    border-color: var(--flame) !important;
+    box-shadow: 0 0 0 3px var(--flame-glow) !important;
+    outline: none !important;
+    width: 380px !important;
+  }
+
+  #changelist-search input[type="submit"] {
+    background: var(--charcoal) !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: var(--radius-full) !important;
+    padding: 7px 18px !important;
+    font-size: 0.76rem !important;
+    font-weight: 700 !important;
+    cursor: pointer !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.06em !important;
+    transition: var(--transition) !important;
+  }
+  #changelist-search input[type="submit"]:hover {
+    background: var(--flame) !important;
+    transform: translateY(-1px) !important;
+  }
+
+  /* Action Selection Bar */
+  .actions {
+    background: #ffffff !important;
+    border-bottom: 1px solid var(--border) !important;
+    padding: 10px 18px !important;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.8rem !important;
+  }
+
+  .actions select {
+    border: 1.5px solid var(--border) !important;
+    border-radius: var(--radius-sm) !important;
+    padding: 6px 12px !important;
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+    background: #ffffff !important;
+    color: var(--charcoal) !important;
+  }
+
+  .actions button[type="submit"], .actions .button {
+    background: linear-gradient(135deg, var(--flame) 0%, #ff7700 100%) !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: var(--radius-full) !important;
+    padding: 6px 16px !important;
+    font-size: 0.74rem !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+    cursor: pointer !important;
+    box-shadow: var(--shadow-flame) !important;
+    transition: var(--transition) !important;
+  }
+  .actions button[type="submit"]:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 20px rgba(255, 85, 0, 0.45) !important;
+  }
+
+  /* Results Table */
+  #changelist table {
+    width: 100% !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+  }
+
+  #changelist table thead th {
+    background: #faf6f0 !important;
+    color: var(--charcoal-subtle) !important;
+    font-size: 0.7rem !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+    padding: 11px 14px !important;
+    border-bottom: 1.5px solid var(--border) !important;
+    border-top: none !important;
+  }
+
+  #changelist table thead th a {
+    color: var(--charcoal-subtle) !important;
+    text-decoration: none !important;
+  }
+  #changelist table thead th a:hover { color: var(--flame) !important; }
+
+  #changelist table tbody tr {
+    transition: all 0.15s ease !important;
+  }
+
+  #changelist table tbody td, #changelist table tbody th {
+    padding: 12px 14px !important;
+    font-size: 0.83rem !important;
+    border-bottom: 1px solid rgba(44, 32, 22, 0.05) !important;
+    vertical-align: middle !important;
+  }
+
+  #changelist table tbody tr:nth-child(even) td, 
+  #changelist table tbody tr:nth-child(even) th {
+    background-color: #fdfbf7 !important;
+  }
+
+  #changelist table tbody tr:hover td, 
+  #changelist table tbody tr:hover th {
+    background-color: #fff6ee !important;
+  }
+
+  #changelist table tbody tr.selected td,
+  #changelist table tbody tr.selected th {
+    background-color: #ffece0 !important;
+  }
+
+  /* Checkbox styling */
+  input[type="checkbox"] {
+    accent-color: var(--flame);
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+  }
+
+  /* Status Pills */
+  .caddy-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: var(--radius-full);
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .caddy-pill-pending { background: #fff8db; color: #d97706; border: 1px solid #fde68a; }
+  .caddy-pill-confirmed { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+  .caddy-pill-kitchen { background: #fff0e6; color: #ea580c; border: 1px solid #fed7aa; }
+  .caddy-pill-packed { background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; }
+  .caddy-pill-onway { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+  .caddy-pill-delivered { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+  .caddy-pill-cancelled { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+
+  .caddy-role-customer { background: #eff6ff; color: #2563eb; font-weight: 700; border-radius: 6px; padding: 2px 7px; font-size: 0.72rem; border: 1px solid #bfdbfe; }
+  .caddy-role-rider { background: #fff0e6; color: #ea580c; font-weight: 800; border-radius: 6px; padding: 2px 7px; font-size: 0.72rem; border: 1px solid #fed7aa; }
+  .caddy-role-kitchen { background: #ecfdf5; color: #059669; font-weight: 800; border-radius: 6px; padding: 2px 7px; font-size: 0.72rem; border: 1px solid #a7f3d0; }
+  .caddy-role-admin { background: #fff9db; color: #d97706; font-weight: 800; border-radius: 6px; padding: 2px 7px; font-size: 0.72rem; border: 1px solid #fde68a; }
+
+  /* Thumbnails */
+  .caddy-thumb {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    object-fit: cover;
+    border: 1.5px solid #ffffff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    transition: var(--transition);
+  }
+  .caddy-thumb:hover { transform: scale(1.1); }
+
+  /* Modern Pagination */
+  .paginator {
+    background: #faf7f2 !important;
+    border-top: 1px solid var(--border) !important;
+    padding: 10px 18px !important;
+    font-size: 0.78rem !important;
+    color: var(--charcoal-subtle) !important;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .paginator a:link, .paginator a:visited {
+    background: #ffffff !important;
+    border: 1px solid var(--border) !important;
+    padding: 4px 10px !important;
+    border-radius: var(--radius-xs) !important;
+    color: var(--charcoal) !important;
+    text-decoration: none !important;
+    font-weight: 700 !important;
+    margin: 0 2px !important;
+    transition: var(--transition) !important;
+  }
+  .paginator a:hover {
+    background: var(--flame) !important;
+    color: #ffffff !important;
+    border-color: var(--flame) !important;
+  }
+  .paginator .this-page {
+    background: var(--charcoal) !important;
+    color: #ffffff !important;
+    padding: 4px 10px !important;
+    border-radius: var(--radius-xs) !important;
+    font-weight: 800 !important;
+    margin: 0 2px !important;
+  }
+
+  /* Filters Sidebar */
+  #changelist-filter {
+    background: #faf7f2 !important;
+    border-left: 1px solid var(--border) !important;
+    padding: 18px !important;
+    border-radius: 0 var(--radius-md) var(--radius-md) 0 !important;
+  }
+
+  #changelist-filter h2 {
+    background: transparent !important;
+    color: var(--charcoal) !important;
+    font-size: 0.78rem !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+    padding: 0 0 10px 0 !important;
+    border-bottom: 1.5px solid var(--border) !important;
+  }
+
+  #changelist-filter h3 {
+    font-weight: 800 !important;
+    color: var(--charcoal-subtle) !important;
+    font-size: 0.72rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.06em !important;
+    margin-top: 14px !important;
+  }
+
+  #changelist-filter ul { padding-left: 0 !important; margin: 6px 0 !important; }
+  #changelist-filter li {
+    padding: 3px 8px !important;
+    border-radius: var(--radius-xs) !important;
+    margin-bottom: 2px !important;
+    transition: var(--transition) !important;
+  }
+  #changelist-filter li:hover { background: var(--flame-light) !important; }
+  #changelist-filter li.selected { background: var(--flame) !important; }
+  #changelist-filter li.selected a { color: #ffffff !important; font-weight: 800 !important; }
+
+  /* Object Tools (+ Add Object Button) */
+  .object-tools a {
+    border-radius: var(--radius-full) !important;
+    background: linear-gradient(135deg, var(--flame) 0%, #ff7700 100%) !important;
+    font-weight: 800 !important;
+    font-size: 0.72rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.06em !important;
+    padding: 7px 16px !important;
+    box-shadow: var(--shadow-flame) !important;
+    transition: var(--transition) !important;
+  }
+  .object-tools a:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 14px rgba(255, 85, 0, 0.45) !important;
+  }
+
+  /* Form & Changeform View */
+  .module {
+    background: #ffffff !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-md) !important;
+    box-shadow: var(--shadow-card) !important;
+    margin-bottom: 20px !important;
+    overflow: hidden !important;
+  }
+
+  .module h2 {
+    background: #faf6f0 !important;
+    color: var(--charcoal) !important;
+    font-family: 'Space Grotesk', sans-serif !important;
+    font-weight: 800 !important;
+    font-size: 0.88rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    padding: 12px 18px !important;
+    border-bottom: 1px solid var(--border) !important;
+  }
+
+  .form-row {
+    padding: 12px 18px !important;
+    border-bottom: 1px solid rgba(44, 32, 22, 0.05) !important;
+  }
+
+  .submit-row {
+    background: #faf7f2 !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-md) !important;
+    padding: 14px 20px !important;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+</style>
+{% endblock %}
+
+{% block branding %}
+<h1 id="site-name">
+  <a href="{% url 'admin:index' %}">
+    <span>🌙 KENNEDY</span>
+    <span class="caddy-mini-chip">Caddy Admin</span>
+  </a>
+</h1>
+{% endblock %}
+
+{% block nav-global %}
+<div class="caddy-nav-pills">
+  <a href="http://localhost:3000" target="_blank">🍕 Storefront</a>
+  <a href="http://localhost:3000/rider" target="_blank">🛵 Rider Console</a>
+  <a href="http://localhost:3000/admin" target="_blank">👑 Owner React</a>
+  <a href="/api/docs/" target="_blank">📖 API Docs</a>
+  <a href="{% url 'admin:orders_order_changelist' %}?status__exact=confirmed">🔥 Confirmed Orders</a>
+  <a href="{% url 'admin:auth_user_changelist' %}?is_active__exact=0&profile__role__exact=rider">🛵 Review Riders</a>
+</div>
+{% endblock %}
