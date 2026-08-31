@@ -168,15 +168,23 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-# Redis Channel Layers — automatically handles Railway REDIS_URL or REDISURL
-REDIS_URL = env("REDIS_URL", default=env("REDISURL", default="redis://127.0.0.1:6379"))
+# Redis Channel Layers — automatically handles Railway / Upstash REDIS_URL with InMemory fallback
+REDIS_URL = env("REDIS_URL", default=env("REDISURL", default=""))
 
-CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {"hosts": [REDIS_URL]},
-    },
-}
+if REDIS_URL and REDIS_URL.strip():
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {"hosts": [REDIS_URL]},
+        },
+    }
+else:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer",
+        },
+    }
+
 
 
 # CORS & CSRF Configuration for Railway & Local
