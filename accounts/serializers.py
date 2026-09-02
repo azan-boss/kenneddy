@@ -1,4 +1,5 @@
 from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -106,6 +107,13 @@ class SignupSerializer(serializers.Serializer):
         full_name = validated_data.get("full_name", "").strip()
         phone = validated_data.get("phone", "").strip()
 
+        # Run all AUTH_PASSWORD_VALIDATORS (min length, common, numeric, letter+number)
+        password = validated_data["password"]
+        try:
+            validate_password(password)
+        except Exception as exc:
+            raise serializers.ValidationError({"password": list(exc.messages)})
+
         # Rider and Staff accounts require admin approval before login
         is_active = (requested_role not in [Role.RIDER, Role.KITCHEN])
 
@@ -135,6 +143,8 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     username = serializers.CharField(source="user.username", read_only=True)
     email = serializers.EmailField(source="user.email", read_only=True)
+    is_superuser = serializers.BooleanField(source="user.is_superuser", read_only=True)
+    is_staff = serializers.BooleanField(source="user.is_staff", read_only=True)
 
     class Meta:
         model = Profile
@@ -142,13 +152,16 @@ class ProfileSerializer(serializers.ModelSerializer):
             "username",
             "email",
             "role",
+            "is_superuser",
+            "is_staff",
+            "is_email_verified",
             "full_name",
             "phone",
             "avatar_url",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["role", "created_at", "updated_at"]
+        read_only_fields = ["role", "is_email_verified", "created_at", "updated_at"]
 
 
 class AddressSerializer(serializers.ModelSerializer):

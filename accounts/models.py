@@ -1,6 +1,11 @@
+import random
+import string
+from datetime import timedelta
+
 from django.contrib.auth.models import User
 from django.db import models
 from django.core.validators import RegexValidator
+from django.utils import timezone
 
 
 class Role(models.TextChoices):
@@ -22,6 +27,7 @@ class Profile(models.Model):
     full_name = models.CharField(max_length=120, blank=True)
     phone = models.CharField(max_length=20, blank=True, validators=[phone_validator])
     avatar_url = models.URLField(blank=True)
+    is_email_verified = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -123,3 +129,54 @@ class RejectedApplication(models.Model):
 
     def __str__(self):
         return f"{self.username} ({self.role}) rejected at {self.rejected_at:%Y-%m-%d %H:%M}"
+
+
+# ─── Email OTP Verification ────────────────────────────────────────────────────
+
+OTP_EXPIRY_MINUTES = 10
+
+
+def _generate_otp():
+    return "".join(random.choices(string.digits, k=6))
+
+
+class EmailOTP(models.Model):
+    """
+    Stores a 6-digit one-time password tied to a user + purpose.
+    Expires in OTP_EXPIRY_MINUTES. Old codes for the same user+purpose
+    are deleted when a new one is generated.
+    """
+
+    class Purpose(models.TextChoices):
+        EMAIL_VERIFY = "email_verify", "Email Verification"
+        PASSWORD_RESET = "password_reset", "Password Reset"
+
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="email_otps"
+    )
+    purpose = models.CharField(max_length=20, choices=Purpose.choices)
+    code = models.CharField(max_length=6, default=_generate_otp)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+
+    class Meta:
+        verbose_name = "Email OTP"
+        ordering = ["-created_at"]
+
+    def save(self, *args, **kwargs):
+        if not self.expires_at:
+            self.expires_at = timezone.now() + timedelta(minutes=OTP_EXPIRY_MINUTES)
+        super().save(*args, **kwargs)
+
+    @property
+    def is_expired(self):
+        return timezone.now() > self.expires_at
+
+    @classmethod
+    def create_for(cls, user, purpose):
+        """Delete old codes then create a fresh one. Returns the new EmailOTP."""
+        cls.objects.filter(user=user, purpose=purpose).delete()
+        return cls.objects.create(user=user, purpose=purpose, expires_at=timezone.now() + timedelta(minutes=OTP_EXPIRY_MINUTES))
+
+    def __str__(self):
+        return f"{self.user.username} [{self.purpose}] {self.code} (expires {self.expires_at:%H:%M})"

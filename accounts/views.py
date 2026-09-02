@@ -1,11 +1,15 @@
+from django.conf import settings
 from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Address, Profile, Role, RiderProfile, RejectedApplication
+from .email_service import send_otp_email, send_password_reset_email
+from .models import Address, EmailOTP, Profile, Role, RiderProfile, RejectedApplication
 from .serializers import AddressSerializer, ProfileSerializer, SignupSerializer, RiderProfileSerializer
 
 
@@ -565,3 +569,210 @@ class AdminRidersView(APIView):
             )
 
         return Response({"detail": "Rider created", "id": str(user.id)}, status=status.HTTP_201_CREATED)
+
+
+# ─── JWT Logout (blacklist refresh token) ─────────────────────────────────────
+
+class LogoutView(APIView):
+    """
+    POST /api/auth/logout/
+    Blacklists the submitted refresh token (requires token_blacklist in INSTALLED_APPS).
+    Frontend sends: {"refresh": "<refresh_token>"}
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        refresh_token = request.data.get("refresh")
+        if not refresh_token:
+            return Response({"detail": "refresh token required."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            from rest_framework_simplejwt.tokens import RefreshToken
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+            return Response({"detail": "Logged out."}, status=status.HTTP_205_RESET_CONTENT)
+        except Exception:
+            # Token already expired/invalid — still treat as logged out
+            return Response({"detail": "Logged out."}, status=status.HTTP_205_RESET_CONTENT)
+
+
+# ─── Email OTP — Send & Verify ─────────────────────────────────────────────────
+
+class SendEmailOTPView(APIView):
+    """
+    POST /api/auth/send-otp/
+    Sends a 6-digit OTP to the authenticated user's email for email verification.
+    Also used after signup to trigger the first verification code.
+    """
+    permission_classes = [IsAuthenticated]
+    throttle_scope = "otp"
+
+    def post(self, request):
+        user = request.user
+        otp = EmailOTP.create_for(user, EmailOTP.Purpose.EMAIL_VERIFY)
+        sent = send_otp_email(
+            to_email=user.email,
+            otp_code=otp.code,
+            username=user.username,
+        )
+        return Response({
+            "detail": f"OTP bheja gaya: {user.email}",
+            "email_sent": sent,
+        })
+
+
+class VerifyEmailOTPView(APIView):
+    """
+    POST /api/auth/verify-otp/
+    Verifies the 6-digit OTP and marks the user's email as verified.
+    Body: {"code": "123456"}
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        code = str(request.data.get("code", "")).strip()
+        if not code:
+            return Response({"detail": "OTP code required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        otp = (
+            EmailOTP.objects
+            .filter(user=request.user, purpose=EmailOTP.Purpose.EMAIL_VERIFY)
+            .order_by("-created_at")
+            .first()
+        )
+
+        if not otp or otp.is_expired:
+            return Response(
+                {"detail": "OTP expire ho gaya ya exist nahi karta. Dobara bhejein."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if otp.code != code:
+            return Response({"detail": "Ghalat OTP code."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Mark email verified + delete OTP
+        profile = request.user.profile
+        profile.is_email_verified = True
+        profile.save(update_fields=["is_email_verified"])
+        otp.delete()
+
+        return Response({"detail": "Email verify ho gaya!", "is_email_verified": True})
+
+
+# ─── Password Reset (forgot password — public) ─────────────────────────────────
+
+class PasswordResetRequestView(APIView):
+    """
+    POST /api/auth/password-reset/
+    Public. Sends a 6-digit OTP to the email if it exists.
+    Always returns 204 — never leaks whether an email exists.
+    Body: {"email": "user@example.com"}
+    """
+    permission_classes = [AllowAny]
+    throttle_scope = "password_reset"
+
+    def post(self, request):
+        email = str(request.data.get("email", "")).strip().lower()
+        # Always return 204 (don't reveal if email exists)
+        try:
+            user = User.objects.get(email__iexact=email, is_active=True)
+            otp = EmailOTP.create_for(user, EmailOTP.Purpose.PASSWORD_RESET)
+            send_password_reset_email(
+                to_email=user.email,
+                reset_link=f"{settings.FRONTEND_URL}/reset-password?email={user.email}&otp={otp.code}",
+                username=user.username,
+            )
+        except User.DoesNotExist:
+            pass  # Silent — don't leak
+
+        return Response(
+            {"detail": "Agar yeh email registered hai, aapko ek OTP mila hoga."},
+            status=status.HTTP_204_NO_CONTENT,
+        )
+
+
+class PasswordResetConfirmView(APIView):
+    """
+    POST /api/auth/password-reset-confirm/
+    Public. Verifies OTP and resets the password.
+    Body: {"email": "...", "otp": "123456", "new_password": "..."}
+    """
+    permission_classes = [AllowAny]
+    throttle_scope = "password_reset"
+
+    def post(self, request):
+        email = str(request.data.get("email", "")).strip().lower()
+        otp_code = str(request.data.get("otp", "")).strip()
+        new_password = request.data.get("new_password", "")
+
+        if not all([email, otp_code, new_password]):
+            return Response(
+                {"detail": "email, otp, aur new_password required hain."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            user = User.objects.get(email__iexact=email, is_active=True)
+        except User.DoesNotExist:
+            return Response({"detail": "Ghalat email ya OTP."}, status=status.HTTP_400_BAD_REQUEST)
+
+        otp = (
+            EmailOTP.objects
+            .filter(user=user, purpose=EmailOTP.Purpose.PASSWORD_RESET)
+            .order_by("-created_at")
+            .first()
+        )
+
+        if not otp or otp.is_expired or otp.code != otp_code:
+            return Response(
+                {"detail": "OTP ghalat ya expire ho gaya hai."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Validate new password against all validators
+        try:
+            validate_password(new_password, user=user)
+        except DjangoValidationError as exc:
+            return Response({"detail": exc.messages}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.set_password(new_password)
+        user.save()
+        otp.delete()
+
+        return Response({"detail": "Password reset ho gaya! Ab login karein."})
+
+
+# ─── Change Password (signed-in user) ─────────────────────────────────────────
+
+class ChangePasswordView(APIView):
+    """
+    POST /api/profile/change-password/
+    Requires authentication.
+    Body: {"current_password": "...", "new_password": "..."}
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        current = request.data.get("current_password", "")
+        new_pass = request.data.get("new_password", "")
+
+        if not current or not new_pass:
+            return Response(
+                {"detail": "current_password aur new_password dono required hain."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not request.user.check_password(current):
+            return Response(
+                {"detail": "Purana password ghalat hai."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            validate_password(new_pass, user=request.user)
+        except DjangoValidationError as exc:
+            return Response({"detail": exc.messages}, status=status.HTTP_400_BAD_REQUEST)
+
+        request.user.set_password(new_pass)
+        request.user.save()
+
+        return Response({"detail": "Password successfully change ho gaya!"})

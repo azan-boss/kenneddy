@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
     "channels",
     "drf_spectacular",
@@ -109,6 +110,15 @@ REST_FRAMEWORK = {
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.ScopedRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "login":          "15/minute",
+        "signup":         "5/minute",
+        "password_reset": "3/minute",
+        "otp":            "5/minute",
+    },
 }
 ASGI_APPLICATION = "config.asgi.application"
 SPECTACULAR_SETTINGS = {
@@ -122,9 +132,16 @@ SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "ROTATE_REFRESH_TOKENS": True,
-    "BLACKLIST_AFTER_ROTATION": False,
+    "BLACKLIST_AFTER_ROTATION": True,   # Blacklist old refresh tokens on rotation
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
+
+# Resend — transactional email (password reset, OTP verification)
+# Set RESEND_API_KEY in Railway Variables / .env — never hardcode here
+RESEND_API_KEY = env("RESEND_API_KEY", default="")
+
+# Frontend base URL — used in password reset links sent via Resend
+FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:3000")
 # Password validation
 # https://docs.djangoproject.com/en/6.1/ref/settings/#auth-password-validators
 
@@ -134,12 +151,16 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {'min_length': 8},
     },
     {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
     },
     {
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+    {
+        'NAME': 'accounts.validators.LetterAndNumberValidator',
     },
 ]
 
