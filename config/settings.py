@@ -219,9 +219,23 @@ else:
 
 
 
-# CORS & CSRF Configuration for Railway & Local
+# CORS & CSRF Configuration for Railway, Vercel & Local
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+]
+
+# Support HTTPS reverse proxy headers on Railway / Vercel
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
@@ -230,6 +244,7 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:5173",
     "http://localhost:8080",
     "http://127.0.0.1:8080",
+    "https://*.vercel.app",
     "https://*.railway.app",
     "https://*.up.railway.app",
 ]
