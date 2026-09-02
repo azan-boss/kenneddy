@@ -12,8 +12,9 @@ logger = logging.getLogger(__name__)
 def _get_resend():
     """Lazy import resend so startup doesn't crash if package is missing."""
     try:
+        import os
         import resend as _resend
-        api_key = getattr(settings, "RESEND_API_KEY", "")
+        api_key = getattr(settings, "RESEND_API_KEY", "") or os.environ.get("RESEND_API_KEY", "")
         if not api_key:
             logger.warning("RESEND_API_KEY not set — emails will be skipped.")
             return None
@@ -27,28 +28,35 @@ def _get_resend():
 FROM_ADDRESS = "Kennedy Moon Grill <onboarding@resend.dev>"
 
 
-def send_password_reset_email(to_email: str, reset_link: str, username: str) -> bool:
+def send_password_reset_email(to_email: str, reset_link: str, otp_code: str, username: str) -> bool:
     """
     Send a password reset email via Resend.
     Returns True on success, False on failure (never raises).
     """
+    print(f"\n[PASSWORD RESET] Sending email to {to_email} with OTP: {otp_code}")
     resend = _get_resend()
     if resend is None:
-        logger.info(f"[EMAIL SKIP] Password reset for {to_email}: {reset_link}")
+        print(f"[EMAIL SKIP] Resend not configured. OTP for {to_email} is: {otp_code}")
         return False
 
     html = f"""
-    <div style="font-family:sans-serif;max-width:480px;margin:auto">
-      <h2 style="color:#d97706">🌙 Kennedy Moon Grill</h2>
+    <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:20px;border:1px solid #eee;border-radius:12px">
+      <h2 style="color:#d97706;margin-top:0">🌙 Kennedy Moon Grill</h2>
       <p>Assalamu Alaikum <strong>{username}</strong>,</p>
-      <p>Aapne password reset request ki hai. Neeche diye link par click karein:</p>
-      <a href="{reset_link}"
-         style="display:inline-block;background:#d97706;color:#fff;padding:12px 24px;
-                border-radius:8px;text-decoration:none;font-weight:bold;margin:16px 0">
-        Reset Password
-      </a>
+      <p>Aapne password reset request ki hai. Aapka 6-digit reset code hai:</p>
+      <div style="font-size:36px;font-weight:bold;letter-spacing:10px;
+                  color:#d97706;text-align:center;padding:18px 0;background:#fff8f0;border-radius:8px">
+        {otp_code}
+      </div>
+      <p style="text-align:center;margin:20px 0">
+        <a href="{reset_link}"
+           style="display:inline-block;background:#d97706;color:#fff;padding:12px 24px;
+                  border-radius:8px;text-decoration:none;font-weight:bold">
+          Reset Password Online
+        </a>
+      </p>
       <p style="color:#888;font-size:13px">
-        Yeh link 1 ghante mein expire ho jaata hai.<br>
+        Yeh code aur link 10 minute mein expire ho jaate hain.<br>
         Agar aapne yeh request nahi ki, toh is email ko ignore kar dein.
       </p>
       <hr style="border:none;border-top:1px solid #eee">
@@ -60,13 +68,13 @@ def send_password_reset_email(to_email: str, reset_link: str, username: str) -> 
         r = resend.Emails.send({
             "from": FROM_ADDRESS,
             "to": to_email,
-            "subject": "Password Reset — Kennedy Moon Grill",
+            "subject": f"Password Reset Code: {otp_code} — Kennedy Moon Grill",
             "html": html,
         })
-        logger.info(f"Password reset email sent to {to_email}: {r}")
+        print(f"[RESEND SUCCESS] Email sent to {to_email}! Message ID: {r.get('id') if isinstance(r, dict) else r}")
         return True
     except Exception as exc:
-        logger.error(f"Resend failed for {to_email}: {exc}")
+        print(f"[RESEND FAILED] Could not send to {to_email}: {exc}")
         return False
 
 

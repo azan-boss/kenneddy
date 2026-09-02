@@ -610,6 +610,7 @@ class SendEmailOTPView(APIView):
     def post(self, request):
         user = request.user
         otp = EmailOTP.create_for(user, EmailOTP.Purpose.EMAIL_VERIFY)
+        print(f"\n[EMAIL OTP VERIFICATION] Generated OTP for '{user.username}' ({user.email}): {otp.code}")
         sent = send_otp_email(
             to_email=user.email,
             otp_code=otp.code,
@@ -682,13 +683,15 @@ class PasswordResetRequestView(APIView):
         try:
             user = User.objects.get(email__iexact=email, is_active=True)
             otp = EmailOTP.create_for(user, EmailOTP.Purpose.PASSWORD_RESET)
+            print(f"\n[PASSWORD RESET] Generated OTP for user '{user.username}' ({user.email}): {otp.code}")
             send_password_reset_email(
                 to_email=user.email,
-                reset_link=f"{settings.FRONTEND_URL}/reset-password?email={user.email}&otp={otp.code}",
+                reset_link=f"{settings.FRONTEND_URL}/reset-password?email={user.email}&code={otp.code}",
+                otp_code=otp.code,
                 username=user.username,
             )
         except User.DoesNotExist:
-            pass  # Silent — don't leak
+            print(f"\n[PASSWORD RESET] Email '{email}' is NOT registered in database. (Returning 204 for security privacy)")
 
         return Response(
             {"detail": "Agar yeh email registered hai, aapko ek OTP mila hoga."},

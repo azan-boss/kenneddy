@@ -7,6 +7,16 @@ import sys
 def main():
     """Run administrative tasks."""
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+
+    # Load local uncommitted dev environment variables from .env.local
+    env_local = os.path.join(os.path.dirname(__file__), '.env.local')
+    if os.path.isfile(env_local):
+        with open(env_local, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    k, v = line.split('=', 1)
+                    os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:
