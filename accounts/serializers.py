@@ -145,6 +145,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source="user.email", read_only=True)
     is_superuser = serializers.BooleanField(source="user.is_superuser", read_only=True)
     is_staff = serializers.BooleanField(source="user.is_staff", read_only=True)
+    is_email_verified = serializers.SerializerMethodField()
 
     class Meta:
         model = Profile
@@ -161,7 +162,14 @@ class ProfileSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["role", "is_email_verified", "created_at", "updated_at"]
+        read_only_fields = ["role", "created_at", "updated_at"]
+
+    def get_is_email_verified(self, obj):
+        try:
+            ev = getattr(obj.user, "email_verification", None)
+            return bool(ev and ev.is_verified)
+        except Exception:
+            return False
 
 
 class AddressSerializer(serializers.ModelSerializer):

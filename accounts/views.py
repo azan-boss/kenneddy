@@ -3,13 +3,14 @@ from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .email_service import send_otp_email, send_password_reset_email
-from .models import Address, EmailOTP, Profile, Role, RiderProfile, RejectedApplication
+from .models import Address, EmailOTP, EmailVerification, Profile, Role, RiderProfile, RejectedApplication
 from .serializers import AddressSerializer, ProfileSerializer, SignupSerializer, RiderProfileSerializer
 
 
@@ -649,10 +650,15 @@ class VerifyEmailOTPView(APIView):
         if otp.code != code:
             return Response({"detail": "Ghalat OTP code."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Mark email verified + delete OTP
-        profile = request.user.profile
-        profile.is_email_verified = True
-        profile.save(update_fields=["is_email_verified"])
+        # Mark email verified in separate EmailVerification model + delete OTP
+        try:
+            ev, _ = EmailVerification.objects.get_or_create(user=request.user)
+            ev.is_verified = True
+            ev.verified_at = timezone.now()
+            ev.save(update_fields=["is_verified", "verified_at", "updated_at"])
+        except Exception:
+            pass
+
         otp.delete()
 
         return Response({"detail": "Email verify ho gaya!", "is_email_verified": True})
@@ -701,12 +707,12 @@ class PasswordResetConfirmView(APIView):
 
     def post(self, request):
         email = str(request.data.get("email", "")).strip().lower()
-        otp_code = str(request.data.get("otp", "")).strip()
+        otp_code = str(request.data.get("code") or request.data.get("otp") or "").strip()
         new_password = request.data.get("new_password", "")
 
         if not all([email, otp_code, new_password]):
             return Response(
-                {"detail": "email, otp, aur new_password required hain."},
+                {"detail": "email, code/otp, aur new_password required hain."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

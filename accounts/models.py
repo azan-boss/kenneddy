@@ -27,7 +27,6 @@ class Profile(models.Model):
     full_name = models.CharField(max_length=120, blank=True)
     phone = models.CharField(max_length=20, blank=True, validators=[phone_validator])
     avatar_url = models.URLField(blank=True)
-    is_email_verified = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -180,3 +179,15 @@ class EmailOTP(models.Model):
 
     def __str__(self):
         return f"{self.user.username} [{self.purpose}] {self.code} (expires {self.expires_at:%H:%M})"
+
+
+class EmailVerification(models.Model):
+    """Stores email verification status in a dedicated table so accounts_profile table remains unchanged."""
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="email_verification")
+    is_verified = models.BooleanField(default=False)
+    verified_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username} (verified={self.is_verified})"
