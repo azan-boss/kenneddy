@@ -86,10 +86,10 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 
-# Database — Automatically detects Railway DATABASE_URL / POSTGRES_URL, with local fallback
+# Database — Automatically detects Railway DATABASE_URL / POSTGRES_URL
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
-DATABASE_URL = (
+_db_url = (
     os.environ.get("DATABASE_URL")
     or os.environ.get("DATABASE_PUBLIC_URL")
     or os.environ.get("DATABASE_PRIVATE_URL")
@@ -98,28 +98,23 @@ DATABASE_URL = (
     or os.environ.get("POSTGRESQL_URL")
     or env("DATABASE_URL", default="")
     or env("POSTGRES_URL", default="")
-    or env("POSTGRES_PRIVATE_URL", default="")
-    or env("POSTGRESQL_URL", default="")
 )
 
-if DATABASE_URL and DATABASE_URL.strip():
+if _db_url and _db_url.strip():
     DATABASES = {
         "default": dj_database_url.parse(
-            DATABASE_URL.strip(),
+            _db_url.strip(),
             conn_max_age=600,
             conn_health_checks=True,
         )
     }
 else:
     DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": env("DB_NAME", default="kennedy"),
-            "USER": env("DB_USER", default="kennedy"),
-            "PASSWORD": env("DB_PASSWORD", default="kennedy_dev_pass"),
-            "HOST": env("DB_HOST", default="127.0.0.1"),
-            "PORT": env("DB_PORT", default="5432"),
-        }
+        "default": dj_database_url.config(
+            default=f"postgres://{env('DB_USER', default='kennedy')}:{env('DB_PASSWORD', default='kennedy_dev_pass')}@{env('DB_HOST', default='127.0.0.1')}:{env('DB_PORT', default='5432')}/{env('DB_NAME', default='kennedy')}",
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
     }
 
 REST_FRAMEWORK = {
