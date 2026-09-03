@@ -1,1 +1,1 @@
-web: python manage.py migrate && python manage.py collectstatic --noinput && daphne -b 0.0.0.0 -p $PORT config.asgi:application
+web: python manage.py migrate && python manage.py collectstatic --noinput && python manage.py seed_menu && python seed_pizzas.py && python manage.py seed_demo_data && daphne -b 0.0.0.0 -p $PORT config.asgi:application
