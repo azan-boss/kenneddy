@@ -90,16 +90,22 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
 DATABASE_URL = (
-    env("DATABASE_URL", default="")
+    os.environ.get("DATABASE_URL")
+    or os.environ.get("DATABASE_PUBLIC_URL")
+    or os.environ.get("DATABASE_PRIVATE_URL")
+    or os.environ.get("POSTGRES_URL")
+    or os.environ.get("POSTGRES_PRIVATE_URL")
+    or os.environ.get("POSTGRESQL_URL")
+    or env("DATABASE_URL", default="")
     or env("POSTGRES_URL", default="")
     or env("POSTGRES_PRIVATE_URL", default="")
     or env("POSTGRESQL_URL", default="")
 )
 
-if DATABASE_URL:
+if DATABASE_URL and DATABASE_URL.strip():
     DATABASES = {
         "default": dj_database_url.parse(
-            DATABASE_URL,
+            DATABASE_URL.strip(),
             conn_max_age=600,
             conn_health_checks=True,
         )
